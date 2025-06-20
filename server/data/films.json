@@ -1,0 +1,50 @@
+[
+  {
+    "id": "2",
+    "title": "The Figurine",
+    "releaseYear": 2009,
+    "genre": [
+      "Thriller"
+    ],
+    "director": "Kunle Afolayan",
+    "cast": [
+      "RMD",
+      "Ramsey Nouah"
+    ],
+    "summary": "A mysterious statue grants seven years of fortune... then seven years of misfortune."
+  },
+  {
+    "id": "a62f2270-8f1d-4885-85ad-61728daa7c3f",
+    "title": "Living in Bondage",
+    "releaseYear": "1992",
+    "genre": [
+      "Drama",
+      "Horror",
+      "Thriller"
+    ],
+    "director": "Kenneth Nnebue",
+    "summary": "A Nigerian horror film",
+    "cast": [
+      "Genevive Nnaji",
+      "RMD"
+    ]
+  },
+  {
+    "id": "d867431e-ff6d-4cb5-8804-6b61606caf5d",
+    "title": "running man",
+    "releaseYear": "2017",
+    "director": "james bond",
+    "summary": "a man navigates life as an athlete while overcoming obstacles",
+    "trailer": "https://www.youtube.com/watch?v=2ZA2IkmvNFk",
+    "genre": [
+      "Drama",
+      "Horror"
+    ],
+    "cast": [
+      "mel gibson",
+      "huda shuda",
+      "jeremiah lyinazz"
+    ],
+    "poster": "/uploads/The-Reader-Uche-Okeke-1750380503845.png"
+  }
+]

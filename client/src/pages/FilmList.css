@@ -1,0 +1,112 @@
+/* FilmList.css */
+
+body, html {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f4f4;
+}
+
+.film-list-container {
+  min-height: 100vh;
+  max-width: 720px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.film-list-container h2 {
+  text-align: center;
+  font-size: 2rem;
+  color: #1e3a8a;
+  margin-bottom: 1.5rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.film-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.film-list li {
+  background-color: #f9fafb;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-left: 4px solid #1e3a8a;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.film-list li:hover {
+  background-color: #eef2ff;
+}
+
+.film-list a {
+  text-decoration: none;
+  color: #1e40af;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.film-list a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .film-list-container {
+    margin: 2rem 1rem;
+    padding: 1.5rem;
+  }
+
+  .film-list li {
+    font-size: 0.95rem;
+  }
+
+  .film-list a {
+    font-size: 1rem;
+  }
+}
+
+mark {
+  background: #fffa8b;
+  padding: 0 2px;
+}
+
+.genre-tags {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.genre-tag {
+  display: inline-block;
+  background-color: #e0e7ff;
+  color: #1e3a8a;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 0 4px 4px 0;
+}
+
+.admin-link {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #2563eb;
+  display: inline-block;
+  text-decoration: none;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
+}
