@@ -1,126 +1,101 @@
-// routes/films.js
+// server/routes/films.js
 import { Router } from 'express';
-import fs from 'fs-extra';
-import path from 'path';
-import { v4 as uuid } from 'uuid';
-import { fileURLToPath } from 'url';
-import upload from '../middleware/upload.js';
+import { pool } from '../db.js';
+import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 
 const router = Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-
-const dataPath   = path.join(__dirname, '../data/films.json');
-const uploadsDir = path.join(__dirname, '../uploads'); // where Multer stores files
-
-const readData  = async () => JSON.parse(await fs.readFile(dataPath, 'utf-8'));
-const writeData = async (d)   => fs.writeFile(dataPath, JSON.stringify(d, null, 2));
-
-/* helper to normalise array fields (cast, genre) -------------------------- */
-const parseArrayField = (val) => {
-  if (!val) return [];
-  // Already an array?
-  if (Array.isArray(val)) return val;
-  // Try JSON‑parse first (FormData often sends JSON strings)
-  try {
-    const parsed = JSON.parse(val);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {/* ignore */}
-  // Fallback: comma‑separated string → array
-  return val.split(',')
-            .map(v => v.trim())
-            .filter(Boolean);
-};
-
-/* ─────────────────────────── ROUTES ─────────────────────────── */
-
-/** GET /films – all films */
+// GET all
 router.get('/', async (_req, res) => {
-  res.json(await readData());
+  try {
+    const result = await pool.query('SELECT * FROM films ORDER BY release_year DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('GET all films error:', err);
+    res.status(500).json({ message: 'Error fetching films' });
+  }
 });
 
-/** GET /films/:id – single film */
+// GET one
 router.get('/:id', async (req, res) => {
-  const film = (await readData()).find(f => f.id === req.params.id);
-  if (!film) return res.status(404).json({ message: 'Not found' });
-  res.json(film);
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM films WHERE id = $1', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('GET one film error:', err);
+    res.status(500).json({ message: 'Error fetching film' });
+  }
 });
 
-/** POST /films – add film (file OR url) */
-router.post(
-  '/',
-  upload.single('poster'),            // field name must be "poster"
-  async (req, res) => {
-    const films = await readData();
+// POST
+router.post('/', upload.single('poster'), async (req, res) => {
+  const {
+    title, releaseYear, genre, director,
+    summary, trailer, cast, posterUrl
+  } = req.body;
 
-    const newFilm = {
-      id: uuid(),
-      title:        req.body.title,
-      releaseYear:  req.body.releaseYear,
-      director:     req.body.director,
-      summary:      req.body.summary,
-      trailer:      req.body.trailer,
-      genre:        parseArrayField(req.body.genre),
-      cast:         parseArrayField(req.body.cast),
-      poster:       req.file
-                      ? `/uploads/${req.file.filename}`   // uploaded file
-                      : (req.body.posterUrl || ''),       // external URL or empty
-    };
+  const id = uuidv4();
+  const genres = Array.isArray(genre) ? genre : JSON.parse(genre);
+  const castArr = Array.isArray(cast) ? cast : JSON.parse(cast);
+  const posterPath = req.file ? `/uploads/${req.file.filename}` : posterUrl || '';
 
-    films.push(newFilm);
-    await writeData(films);
-    res.status(201).json(newFilm);
+  try {
+    await pool.query(`
+      INSERT INTO films (id, title, release_year, genre, director, summary, trailer, poster, "cast")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `, [id, title, releaseYear, genres, director, summary, trailer, posterPath, castArr]);
+
+    res.status(201).json({ message: 'Film added', id });
+  } catch (err) {
+    console.error('POST film error:', err);
+    res.status(500).json({ message: 'Error adding film' });
   }
-);
+});
 
-/** PUT /films/:id – update film (auth + file OR url) */
-router.put(
-  '/:id',
-  authenticate,
-  upload.single('poster'),            // same field name
-  async (req, res) => {
-    const { id } = req.params;
-    const films  = await readData();
-    const idx    = films.findIndex(f => f.id === id);
-    if (idx === -1) return res.status(404).json({ message: 'Film not found' });
+// PUT
+router.put('/:id', authenticate, upload.single('poster'), async (req, res) => {
+  const { id } = req.params;
+  const {
+    title, releaseYear, genre, director,
+    summary, trailer, cast, posterUrl
+  } = req.body;
 
-    const existing = films[idx];
+  const genres = Array.isArray(genre) ? genre : JSON.parse(genre);
+  const castArr = Array.isArray(cast) ? cast : JSON.parse(cast);
+  const posterPath = req.file ? `/uploads/${req.file.filename}` : posterUrl || '';
 
-    const updated = {
-      ...existing,
-      title:        req.body.title        ?? existing.title,
-      releaseYear:  req.body.releaseYear  ?? existing.releaseYear,
-      director:     req.body.director     ?? existing.director,
-      summary:      req.body.summary      ?? existing.summary,
-      trailer:      req.body.trailer      ?? existing.trailer,
-      genre:        req.body.genre ? parseArrayField(req.body.genre) : existing.genre,
-      cast:         req.body.cast  ? parseArrayField(req.body.cast)  : existing.cast,
-    };
+  try {
+    const result = await pool.query(`
+      UPDATE films SET
+        title = $1, release_year = $2, genre = $3, director = $4,
+        summary = $5, trailer = $6, poster = $7, "cast" = $8
+      WHERE id = $9 RETURNING *
+    `, [title, releaseYear, genres, director, summary, trailer, posterPath, castArr, id]);
 
-    // poster logic
-    if (req.file) {
-      updated.poster = `/uploads/${req.file.filename}`;
-    } else if (req.body.posterUrl) {
-      updated.poster = req.body.posterUrl;
-    }
+    if (result.rowCount === 0) return res.status(404).json({ message: 'Not found' });
 
-    films[idx] = updated;
-    await writeData(films);
-    res.json(updated);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('PUT film error:', err);
+    res.status(500).json({ message: 'Error updating film' });
   }
-);
+});
 
-/** DELETE /films/:id – secure delete */
+// DELETE
 router.delete('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
-  const films  = await readData();
-  if (!films.some(f => f.id === id))
-    return res.status(404).json({ message: 'Not found' });
-
-  await writeData(films.filter(f => f.id !== id));
-  res.json({ message: 'Deleted' });
+  try {
+    const result = await pool.query('DELETE FROM films WHERE id = $1', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error('DELETE film error:', err);
+    res.status(500).json({ message: 'Error deleting film' });
+  }
 });
 
 export default router;
